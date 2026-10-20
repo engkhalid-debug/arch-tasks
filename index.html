@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>آرك المتحدة - نظام إدارة المهام والتقييم المتقدم</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f3f4f6;
+        }
+        
+        .tab-content { display: none; animation: fadeIn 0.4s ease-in-out; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Print Specific Styles */
+        @media print {
+            body { background-color: white; font-size: 12pt; }
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            .print-container { 
+                box-shadow: none !important; 
+                margin: 0 !important; 
+                padding: 0 !important;
+                width: 100% !important;
+                border: none !important;
+            }
+            .table-print th, .table-print td { border: 1px solid #ccc !important; padding: 8px !important; }
+            /* Force background colors to print */
+            * { -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
+        }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #e5e7eb; }
+        ::-webkit-scrollbar-thumb { background: #1e3a8a; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #1e40af; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- Header (No Print) -->
+    <header class="bg-[#0f172a] shadow-xl no-print border-b-4 border-yellow-600">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-24">
+                <div class="flex items-center gap-6">
+                    <!-- ٤. اضافة شعار المكتب "الصورة ١" -->
+                    <!-- يتم استخدام مسار الصورة المطلوبة، مع رابط بديل في حال عدم توفرها محلياً -->
+                    <img src="1001556641.png" 
+                         onerror="this.onerror=null; this.src='https://placehold.co/300x100/0f172a/ffffff?text=ARK+UNITED&font=cairo';" 
+                         alt="شعار آرك المتحدة" class="h-16 object-contain">
+                </div>
+                <!-- Navigation Tabs -->
+                <div class="flex space-x-2 space-x-reverse bg-gray-800 p-1.5 rounded-xl shadow-inner">
+                    <button onclick="window.switchTab('dashboard')" id="tab-btn-dashboard" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-bold text-white bg-blue-600 shadow-md transition-all">الرئيسية</button>
+                    <button onclick="window.switchTab('tasks')" id="tab-btn-tasks" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-bold text-gray-300 hover:text-white hover:bg-gray-700 transition-all">المهام اليومية</button>
+                    <button onclick="window.switchTab('reports')" id="tab-btn-reports" class="tab-btn px-5 py-2.5 rounded-lg text-sm font-bold text-gray-300 hover:text-white hover:bg-gray-700 transition-all">التقارير والتقييم</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- ==================== TAB 1: Dashboard ==================== -->
+        <div id="tab-dashboard" class="tab-content active no-print">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h2 class="text-3xl font-black text-gray-800 border-r-8 border-yellow-500 pr-4">الخلاصة والداشبورد</h2>
+                    <p class="text-gray-500 mt-2 pr-4 text-sm font-bold">نظرة عامة على أداء المكتب والمشاريع</p>
+                </div>
+                <div id="dashLoading" class="flex items-center gap-2 text-blue-600 font-bold bg-blue-50 px-4 py-2 rounded-full animate-pulse">
+                    <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    جاري المزامنة...
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
+                <div class="bg-white rounded-2xl shadow-sm p-6 border-b-4 border-blue-600 relative overflow-hidden group">
+                    <div class="absolute -right-4 -top-4 opacity-5 group-hover:scale-110 transition-transform"><svg class="w-32 h-32" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg></div>
+                    <p class="text-gray-500 font-bold text-sm">إجمالي المهام</p>
+                    <h3 class="text-4xl font-black text-gray-800 mt-2" id="dash-total">0</h3>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm p-6 border-b-4 border-green-500 relative overflow-hidden group">
+                     <div class="absolute -right-4 -top-4 opacity-5 text-green-500 group-hover:scale-110 transition-transform"><svg class="w-32 h-32" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></div>
+                    <p class="text-gray-500 font-bold text-sm">المهام المنجزة</p>
+                    <h3 class="text-4xl font-black text-green-600 mt-2" id="dash-completed">0</h3>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm p-6 border-b-4 border-yellow-400 relative overflow-hidden group">
+                     <div class="absolute -right-4 -top-4 opacity-5 text-yellow-500 group-hover:scale-110 transition-transform"><svg class="w-32 h-32" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg></div>
+                    <p class="text-gray-500 font-bold text-sm">قيد التنفيذ</p>
+                    <h3 class="text-4xl font-black text-yellow-600 mt-2" id="dash-pending">0</h3>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm p-6 border-b-4 border-red-500 relative overflow-hidden group">
+                     <div class="absolute -right-4 -top-4 opacity-5 text-red-500 group-hover:scale-110 transition-transform"><svg class="w-32 h-32" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg></div>
+                    <p class="text-gray-500 font-bold text-sm">متأخرة / متعثرة</p>
+                    <h3 class="text-4xl font-black text-red-600 mt-2" id="dash-delayed">0</h3>
+                </div>
+            </div>
+
+            <!-- Dashboard Charts -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-700 mb-6 text-center">أداء المهندسين العام</h3>
+                    <div class="relative h-72 w-full"><canvas id="dashEngChart"></canvas></div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-700 mb-6 text-center">حالة مهام المشاريع (أعلى 5 مشاريع)</h3>
+                    <div class="relative h-72 w-full"><canvas id="dashProjChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 2: Task Management ==================== -->
+        <div id="tab-tasks" class="tab-content no-print">
+            <h2 class="text-3xl font-black text-gray-800 border-r-8 border-blue-600 pr-4 mb-8">تسجيل وإدارة المهام</h2>
+            
+            <div class="bg-white rounded-2xl shadow-lg p-6 mb-10 border border-gray-100">
+                <form id="taskForm" class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">المهندس <span class="text-red-500">*</span></label>
+                        <select id="taskEngineer" required class="w-full border-2 border-gray-200 rounded-xl p-3 bg-gray-50 focus:border-blue-500 focus:ring-0 outline-none transition-colors font-semibold">
+                            <option value="">اختر المهندس...</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">المشروع <span class="text-red-500">*</span></label>
+                        <select id="taskProject" required class="w-full border-2 border-gray-200 rounded-xl p-3 bg-gray-50 focus:border-blue-500 focus:ring-0 outline-none transition-colors font-semibold">
+                            <option value="">اختر المشروع...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">الحالة <span class="text-red-500">*</span></label>
+                        <select id="taskStatus" required class="w-full border-2 border-gray-200 rounded-xl p-3 bg-gray-50 focus:border-blue-500 focus:ring-0 outline-none transition-colors font-bold">
+                            <option value="قيد التنفيذ">⏳ قيد التنفيذ</option>
+                            <option value="منجزة">✅ منجزة</option>
+                            <option value="متأخرة">⚠️ متأخرة</option>
+                            <option value="غير منجزة">❌ غير منجزة</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-3">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">وصف المهمة المطلوبة <span class="text-red-500">*</span></label>
+                        <input type="text" id="taskDescription" required placeholder="اكتب تفاصيل المهمة بوضوح..." class="w-full border-2 border-gray-200 rounded-xl p-3 bg-gray-50 focus:border-blue-500 outline-none transition-colors">
+                    </div>
+                    <div class="flex items-end">
+                        <button type="submit" class="w-full bg-[#0f172a] hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all flex justify-center items-center gap-2">
+                            <span>حفظ وإضافة</span>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Tasks Table -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-5 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                    <h3 class="font-bold text-gray-800 text-lg">سجل المهام النشطة (أحدث المهام)</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-[#0f172a] text-white">
+                            <tr>
+                                <th class="px-6 py-4 text-right text-sm font-bold">التاريخ</th>
+                                <th class="px-6 py-4 text-right text-sm font-bold">المهندس</th>
+                                <th class="px-6 py-4 text-right text-sm font-bold w-2/5">المشروع / المهمة</th>
+                                <th class="px-6 py-4 text-center text-sm font-bold">تحديث الحالة</th>
+                                <th class="px-6 py-4 text-center text-sm font-bold">إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="managementTableBody" class="bg-white divide-y divide-gray-100">
+                            <!-- Injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 3: Reports & Evaluation ==================== -->
+        <div id="tab-reports" class="tab-content">
+            <!-- Filter Controls (No Print) -->
+            <div class="bg-white rounded-2xl shadow-md p-6 mb-8 no-print border-t-8 border-indigo-600">
+                <h2 class="text-2xl font-black text-gray-800 mb-6 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    نظام التقارير والتقييم الذكي
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-600 mb-2">نوع التقرير</label>
+                        <select id="reportType" class="w-full border-2 rounded-lg p-2.5 bg-gray-50 focus:border-indigo-500 font-bold text-indigo-900 outline-none cursor-pointer">
+                            <option value="tasks">تقرير مهام تفصيلي</option>
+                            <option value="evaluation">تقييم أداء المهندسين</option>
+                            <option value="projects">خلاصة أداء المشاريع</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-600 mb-2">الفترة الزمنية</label>
+                        <select id="reportPeriod" class="w-full border-2 rounded-lg p-2.5 bg-gray-50 focus:border-indigo-500 outline-none cursor-pointer">
+                            <option value="daily">يومي (اليوم فقط)</option>
+                            <option value="weekly">أسبوعي (آخر 7 أيام)</option>
+                            <option value="monthly" selected>شهري (الشهر الحالي)</option>
+                            <option value="all">كل الأوقات</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-600 mb-2">تصفية بالمهندس</label>
+                        <select id="reportEngineer" class="w-full border-2 rounded-lg p-2.5 bg-gray-50 focus:border-indigo-500 outline-none cursor-pointer">
+                            <option value="all">جميع المهندسين</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-600 mb-2">تصفية بالمشروع</label>
+                        <select id="reportProject" class="w-full border-2 rounded-lg p-2.5 bg-gray-50 focus:border-indigo-500 outline-none cursor-pointer">
+                            <option value="all">جميع المشاريع</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end gap-2">
+                        <button onclick="window.generateReport()" class="flex-1 bg-indigo-600 hover:bg-indigo-800 text-white font-bold py-2.5 px-2 rounded-lg shadow-md transition-all flex justify-center items-center gap-1">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            توليد
+                        </button>
+                        <button onclick="window.printReport()" class="bg-gray-800 hover:bg-black text-white p-2.5 rounded-lg shadow-md transition-all title="طباعة / PDF">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Printable Report Canvas -->
+            <div id="printableReport" class="print-container bg-white rounded-2xl shadow-xl p-8 lg:p-12 border border-gray-200 min-h-[700px] relative">
+                
+                <!-- Report Header (Print only / inside report) -->
+                <div class="flex justify-between items-start border-b-4 border-[#0f172a] pb-6 mb-8">
+                    <div>
+                        <h1 class="text-3xl font-black text-[#0f172a]" id="repDocTitle">تقرير الإنجاز العام</h1>
+                        <div class="mt-3 space-y-1">
+                            <p class="text-gray-700 font-bold bg-gray-100 inline-block px-3 py-1 rounded" id="repDocMeta">الفترة: شهري | المهندس: الجميع</p>
+                            <p class="text-gray-500 text-sm font-bold">تاريخ الإصدار: <span id="repDocDate"></span></p>
+                        </div>
+                    </div>
+                    <div class="text-left">
+                        <!-- الشعار في التقرير (نفس الصورة رقم ١) -->
+                        <img src="1001556641.png" 
+                             onerror="this.onerror=null; this.src='https://placehold.co/250x80/0f172a/ffffff?text=ARK+UNITED&font=cairo';" 
+                             alt="شعار آرك المتحدة" class="h-20 object-contain">
+                    </div>
+                </div>
+
+                <!-- Dynamic Report Content Area -->
+                <div id="reportContentArea">
+                    <div class="text-center py-20 text-gray-400">
+                        <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <p class="font-bold text-lg">يرجى تحديد الخيارات والضغط على "توليد" لعرض التقرير.</p>
+                    </div>
+                </div>
+
+                <!-- Signatures Section (الصورة ٢ و ٣) -->
+                <div class="mt-20 pt-10 border-t-2 border-gray-200 flex justify-between items-end break-inside-avoid">
+                    <!-- Manager Signature -->
+                    <div class="text-center w-64">
+                        <p class="font-bold text-gray-500 mb-2">المدير التنفيذي</p>
+                        
+                        <!-- ٥. اسم المدير "الصورة ٢" -->
+                        <div class="h-10 mb-2 flex justify-center items-center">
+                            <img src="1001396579.png" 
+                                 onerror="this.onerror=null; this.src='https://placehold.co/200x40/ffffff/0000ff?text=م.+خالد+سالم+الحامدي&font=cairo';" 
+                                 alt="اسم المدير" class="h-full object-contain mix-blend-multiply">
+                        </div>
+
+                        <div class="relative h-24 w-full flex justify-center items-center border-b border-dashed border-gray-300">
+                            <!-- ٥. توقيع المدير "الصورة ٣" -->
+                            <img src="1001396578.png" 
+                                 onerror="this.onerror=null; this.src='https://placehold.co/150x80/ffffff/0000ff?text=التوقيع';" 
+                                 alt="توقيع المدير" class="absolute h-20 z-10 mix-blend-multiply opacity-90" style="bottom: 5px;">
+                        </div>
+                    </div>
+                    
+                    <!-- Company Stamp -->
+                    <div class="text-center w-48 mr-auto">
+                        <p class="font-bold text-gray-400 mb-4">الختم الرسمي</p>
+                        <div class="h-28 w-28 rounded-full border-4 border-double border-gray-200 mx-auto flex items-center justify-center bg-gray-50">
+                            <span class="text-gray-300 text-xs font-bold">مكان الختم</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ٦. Global Footer -->
+    <footer class="bg-[#0f172a] text-gray-400 py-5 text-center text-sm font-bold mt-auto no-print border-t border-gray-800">
+        <p class="text-gray-300">اعداد المهندس: خالد سالم الحامدي - ٧٧٤٨٤٤٠٤٨ - eng.khalid.ark@gmail.com</p>
+        <p class="text-xs mt-1 text-gray-500">&copy; 2024 نظام إدارة مهام آرك المتحدة</p>
+    </footer>
+
+    <!-- Firebase & Logic Script -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, updateDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // ================= CONFIGURATION & DATA =================
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'united-arch-system-v2';
+        let firebaseConfig = {};
+        try { firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {}; } catch (e) {}
+
+        const engineersList = [
+            "م. أحمد محمد السكوتي", "م. حامد حسن العطاس", "م. خالد سالم الحامدي", 
+            "م. رغد العطاس", "م. مزاحم محمد بامزاحم", "م. عبدالله سعيد باوزير", 
+            "م. أحمد علي بارشيد", "م. صالح سالم باريان"
+        ];
+        
+        const engineersPhones = {
+            "م. أحمد محمد السكوتي": "967700000001", "م. حامد حسن العطاس": "967700000002",
+            "م. خالد سالم الحامدي": "967700000003", "م. رغد العطاس": "967700000004",
+            "م. مزاحم محمد بامزاحم": "967700000005", "م. عبدالله سعيد باوزير": "967700000006",
+            "م. أحمد علي بارشيد": "967700000007", "م. صالح سالم باريان": "967700000008"
+        };
+
+        const projectsList = [
+            "مشروع العمودي", "مشروع عمارة الشماسي", "مشروع حوش فيلا الشماسي", "مشروع مسجد فلك",
+            "مشروع ياسر السومحي", "مشروع سعيد باقروان", "مشروع فهد الكثيري", "مشروع محكمة الريدة",
+            "مشروع فهد بن سعد", "مشروع صالح باعباد", "مشروع محكمة الاستئناف - المكلا",
+            "مشروع رايد بلعفير", "مشروع الدكتور عامر بلعفير", "مشروع مسجد الرقق", "مشروع فيلا ثابت بن ماضي"
+        ];
+
+        let app, db, auth, tasksCollection;
+        let allTasks = []; 
+        let chartsInstance = {}; 
+
+        // Set Print Date
+        document.getElementById('repDocDate').innerText = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute:'2-digit' });
+
+        // ================= INITIALIZATION =================
+        async function init() {
+            populateDropdowns();
+
+            if (Object.keys(firebaseConfig).length === 0) {
+                console.warn("No Firebase config. App will not save data.");
+                document.getElementById('dashLoading').innerHTML = "وضع عدم الاتصال";
+                return;
+            }
+
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                tasksCollection = collection(db, 'artifacts', appId, 'public', 'data', 'tasks');
+                fetchTasks();
+
+            } catch (error) {
+                console.error("Firebase Init Error:", error);
+            }
+        }
+
+        function populateDropdowns() {
+            const engHTML = engineersList.map(e => `<option value="${e}">${e}</option>`).join('');
+            const projHTML = projectsList.map(p => `<option value="${p}">${p}</option>`).join('');
+            
+            document.getElementById('taskEngineer').innerHTML += engHTML;
+            document.getElementById('reportEngineer').innerHTML += engHTML;
+            
+            document.getElementById('taskProject').innerHTML += projHTML;
+            document.getElementById('reportProject').innerHTML += projHTML;
+        }
+
+        // ================= DATA FETCHING =================
+        function fetchTasks() {
+            if (!auth.currentUser) return;
+            
+            onSnapshot(tasksCollection, (snapshot) => {
+                allTasks = [];
+                snapshot.forEach(doc => { allTasks.push({ id: doc.id, ...doc.data() }); });
+                allTasks.sort((a, b) => b.createdAt - a.createdAt);
+                
+                document.getElementById('dashLoading').classList.add('hidden');
+                
+                updateDashboard();
+                renderTasksTable();
+            }, (error) => { console.error("Fetch Error:", error); });
+        }
+
+        // ================= DASHBOARD TAB =================
+        function updateDashboard() {
+            let total = allTasks.length, completed = 0, pending = 0, delayed = 0;
+            let engStats = {}, projStats = {};
+            
+            engineersList.forEach(e => engStats[e] = { total:0, done:0 });
+            projectsList.forEach(p => projStats[p] = { total:0, done:0 });
+
+            allTasks.forEach(t => {
+                if(t.status === 'منجزة') completed++;
+                else if(t.status === 'قيد التنفيذ') pending++;
+                else delayed++;
+
+                if(engStats[t.engineer]) {
+                    engStats[t.engineer].total++;
+                    if(t.status === 'منجزة') engStats[t.engineer].done++;
+                }
+                if(projStats[t.project]) {
+                    projStats[t.project].total++;
+                    if(t.status === 'منجزة') projStats[t.project].done++;
+                }
+            });
+
+            document.getElementById('dash-total').innerText = total;
+            document.getElementById('dash-completed').innerText = completed;
+            document.getElementById('dash-pending').innerText = pending;
+            document.getElementById('dash-delayed').innerText = delayed;
+
+            drawCharts(engStats, projStats);
+        }
+
+        function drawCharts(engStats, projStats) {
+            if(chartsInstance.engChart) chartsInstance.engChart.destroy();
+            if(chartsInstance.projChart) chartsInstance.projChart.destroy();
+
+            // Engineer Chart
+            const ctxEng = document.getElementById('dashEngChart').getContext('2d');
+            chartsInstance.engChart = new Chart(ctxEng, {
+                type: 'bar',
+                data: {
+                    labels: engineersList.map(n => n.replace('م. ', '').split(' ')[0]), // First name only for space
+                    datasets: [
+                        { label: 'منجزة', data: engineersList.map(e => engStats[e].done), backgroundColor: '#10B981', borderRadius: 4 },
+                        { label: 'إجمالي', data: engineersList.map(e => engStats[e].total), backgroundColor: '#E5E7EB', borderRadius: 4 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: false, beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { position: 'bottom', labels: {font:{family:'Cairo'}} } } }
+            });
+
+            // Project Chart (Top 5 Active)
+            const sortedProj = Object.keys(projStats).sort((a,b) => projStats[b].total - projStats[a].total).slice(0,5);
+            const ctxProj = document.getElementById('dashProjChart').getContext('2d');
+            chartsInstance.projChart = new Chart(ctxProj, {
+                type: 'doughnut',
+                data: {
+                    labels: sortedProj.map(p => p.replace('مشروع ', '')),
+                    datasets: [{
+                        data: sortedProj.map(p => projStats[p].total),
+                        backgroundColor: ['#3B82F6', '#8B5CF6', '#F59E0B', '#10B981', '#EF4444'],
+                        borderWidth: 2, borderColor: '#fff'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: {font:{family:'Cairo'}} } } }
+            });
+        }
+
+        // ================= TASKS TAB =================
+        function getStatusBadge(status) {
+            switch(status) {
+                case 'منجزة': return '<span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap">✅ منجزة</span>';
+                case 'قيد التنفيذ': return '<span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap">⏳ قيد التنفيذ</span>';
+                case 'متأخرة': return '<span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap">⚠️ متأخرة</span>';
+                default: return '<span class="bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap">❌ غير منجزة</span>';
+            }
+        }
+
+        function renderTasksTable() {
+            const tbody = document.getElementById('managementTableBody');
+            tbody.innerHTML = '';
+            
+            const displayTasks = allTasks.slice(0, 50); // Show last 50
+            if(displayTasks.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-10 text-gray-500 font-bold">لا توجد مهام مسجلة حالياً</td></tr>`;
+                return;
+            }
+
+            displayTasks.forEach(task => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-blue-50 transition-colors";
+                const d = new Date(task.createdAt);
+                
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-semibold">${d.toLocaleDateString('ar-EG')}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-[#0f172a]">${task.engineer}</td>
+                    <td class="px-6 py-4 text-sm text-gray-700">
+                        <div class="font-black text-indigo-700 mb-1">${task.project}</div>
+                        <div class="text-gray-600 line-clamp-2" title="${task.description}">${task.description}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        <select onchange="window.updateStatus('${task.id}', this.value)" class="text-sm font-bold rounded-lg border-2 border-gray-200 p-1.5 outline-none cursor-pointer focus:border-blue-500 ${task.status==='منجزة'?'bg-green-50 text-green-700':''}">
+                            <option value="قيد التنفيذ" ${task.status === 'قيد التنفيذ' ? 'selected' : ''}>قيد التنفيذ</option>
+                            <option value="منجزة" ${task.status === 'منجزة' ? 'selected' : ''}>منجزة</option>
+                            <option value="متأخرة" ${task.status === 'متأخرة' ? 'selected' : ''}>متأخرة</option>
+                            <option value="غير منجزة" ${task.status === 'غير منجزة' ? 'selected' : ''}>غير منجزة</option>
+                        </select>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        <button onclick="window.sendWA('${task.id}')" class="bg-green-500 hover:bg-green-600 text-white p-2.5 rounded-xl mx-1 shadow transition-transform hover:scale-105" title="واتساب">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+                        </button>
+                        <button onclick="window.delTask('${task.id}')" class="bg-gray-100 hover:bg-red-100 text-red-500 p-2.5 rounded-xl mx-1 shadow transition-colors" title="حذف">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Form Submit
+        document.getElementById('taskForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!auth.currentUser) return;
+            
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true; btn.innerHTML = 'جاري الحفظ...';
+
+            const payload = {
+                engineer: document.getElementById('taskEngineer').value,
+                project: document.getElementById('taskProject').value,
+                status: document.getElementById('taskStatus').value,
+                description: document.getElementById('taskDescription').value,
+                createdAt: Date.now()
+            };
+
+            try {
+                await addDoc(tasksCollection, payload);
+                document.getElementById('taskDescription').value = '';
+                document.getElementById('taskStatus').value = 'قيد التنفيذ';
+            } catch (error) { console.error(error); } 
+            finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>حفظ وإضافة</span><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>';
+            }
+        });
+
+        window.updateStatus = async (id, newStatus) => {
+            if (!auth.currentUser) return;
+            try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', id), { status: newStatus }); } 
+            catch(e) {}
+        };
+        window.delTask = async (id) => {
+            if (!auth.currentUser) return;
+            if(confirm("هل أنت متأكد من حذف هذه المهمة؟")) {
+                try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', id)); } 
+                catch(e) {}
+            }
+        };
+        window.sendWA = (id) => {
+            const task = allTasks.find(t => t.id === id);
+            if (!task) return;
+            const phone = engineersPhones[task.engineer] || "";
+            const msg = `السلام عليكم ${task.engineer}،\n\n📌 *مهمة جديدة*\n🏢 *المشروع:* ${task.project}\n📝 *التفاصيل:* ${task.description}\n📊 *الحالة:* ${task.status}\n\nنأمل الإنجاز، وبالتوفيق!`;
+            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+        };
+
+        // ================= REPORTS & EVALUATION GENERATOR =================
+        window.generateReport = () => {
+            const type = document.getElementById('reportType').value;
+            const period = document.getElementById('reportPeriod').value;
+            const fEng = document.getElementById('reportEngineer').value;
+            const fProj = document.getElementById('reportProject').value;
+            
+            const now = new Date();
+            
+            // 1. Filter Data
+            const filteredData = allTasks.filter(task => {
+                let validDate = true;
+                const tDate = new Date(task.createdAt);
+                
+                if (period === 'daily') {
+                    validDate = (tDate.toDateString() === now.toDateString());
+                } else if (period === 'weekly') {
+                    const diffDays = Math.ceil(Math.abs(now - tDate) / (1000 * 60 * 60 * 24)); 
+                    validDate = diffDays <= 7;
+                } else if (period === 'monthly') {
+                    validDate = (tDate.getMonth() === now.getMonth() && tDate.getFullYear() === now.getFullYear());
+                }
+                
+                const validEng = (fEng === 'all' || task.engineer === fEng);
+                const validProj = (fProj === 'all' || task.project === fProj);
+
+                return validDate && validEng && validProj;
+            });
+
+            // 2. Set Meta Titles
+            const typeText = document.getElementById('reportType').options[document.getElementById('reportType').selectedIndex].text;
+            const periodText = document.getElementById('reportPeriod').options[document.getElementById('reportPeriod').selectedIndex].text;
+            const engText = fEng === 'all' ? 'الجميع' : fEng;
+            const projText = fProj === 'all' ? 'الجميع' : fProj;
+
+            document.getElementById('repDocTitle').innerText = typeText;
+            document.getElementById('repDocMeta').innerText = `الفترة: ${periodText} | المهندس: ${engText} | المشروع: ${projText}`;
+
+            // 3. Render Target Content
+            const container = document.getElementById('reportContentArea');
+            container.innerHTML = '';
+
+            if(filteredData.length === 0) {
+                container.innerHTML = `<div class="text-center py-10 font-bold text-red-500">لا توجد بيانات مطابقة لخيارات البحث المحددة.</div>`;
+                return;
+            }
+
+            if(type === 'tasks') {
+                renderTasksReport(filteredData, container);
+            } else if (type === 'evaluation') {
+                renderEvaluationReport(filteredData, container, 'engineer', engineersList, fEng);
+            } else if (type === 'projects') {
+                renderEvaluationReport(filteredData, container, 'project', projectsList, fProj);
+            }
+        };
+
+        function renderTasksReport(data, container) {
+            let html = `
+                <table class="min-w-full border-collapse border border-gray-300 table-print mb-8">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="border border-gray-300 px-4 py-3 text-right text-sm font-bold w-24">التاريخ</th>
+                            <th class="border border-gray-300 px-4 py-3 text-right text-sm font-bold w-48">المهندس / المشروع</th>
+                            <th class="border border-gray-300 px-4 py-3 text-right text-sm font-bold">وصف المهمة</th>
+                            <th class="border border-gray-300 px-4 py-3 text-center text-sm font-bold w-28">الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm">
+            `;
+            data.forEach(task => {
+                const d = new Date(task.createdAt).toLocaleDateString('ar-EG');
+                html += `
+                    <tr>
+                        <td class="border border-gray-300 px-4 py-3 align-top font-semibold text-gray-600">${d}</td>
+                        <td class="border border-gray-300 px-4 py-3 align-top">
+                            <div class="font-black text-[#0f172a]">${task.engineer}</div>
+                            <div class="text-xs text-indigo-600 font-bold mt-1">${task.project}</div>
+                        </td>
+                        <td class="border border-gray-300 px-4 py-3 align-top text-gray-800 font-medium">${task.description}</td>
+                        <td class="border border-gray-300 px-4 py-3 text-center align-top">${getStatusBadge(task.status)}</td>
+                    </tr>
+                `;
+            });
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        }
+
+        function renderEvaluationReport(data, container, groupKey, fullList, filterVal) {
+            // Aggregate stats
+            let stats = {};
+            const listToUse = filterVal === 'all' ? fullList : [filterVal];
+            
+            listToUse.forEach(item => {
+                stats[item] = { total: 0, done: 0, pending: 0, delayed: 0 };
+            });
+
+            data.forEach(task => {
+                const key = task[groupKey];
+                if(stats[key]) {
+                    stats[key].total++;
+                    if(task.status === 'منجزة') stats[key].done++;
+                    else if(task.status === 'قيد التنفيذ') stats[key].pending++;
+                    else stats[key].delayed++;
+                }
+            });
+
+            let html = `
+                <table class="min-w-full border-collapse border border-gray-300 table-print mb-8">
+                    <thead class="bg-[#0f172a] text-white">
+                        <tr>
+                            <th class="border border-gray-400 px-4 py-3 text-right text-sm font-bold">${groupKey === 'engineer' ? 'اسم المهندس' : 'اسم المشروع'}</th>
+                            <th class="border border-gray-400 px-4 py-3 text-center text-sm font-bold">إجمالي المهام</th>
+                            <th class="border border-gray-400 px-4 py-3 text-center text-sm font-bold text-green-400">منجزة</th>
+                            <th class="border border-gray-400 px-4 py-3 text-center text-sm font-bold text-yellow-400">قيد التنفيذ</th>
+                            <th class="border border-gray-400 px-4 py-3 text-center text-sm font-bold text-red-400">متأخرة/غير منجزة</th>
+                            <th class="border border-gray-400 px-4 py-3 text-center text-sm font-bold text-indigo-300">نسبة الإنجاز</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm">
+            `;
+
+            let hasData = false;
+            Object.keys(stats).forEach(name => {
+                const s = stats[name];
+                if(s.total > 0) {
+                    hasData = true;
+                    // Score = (Done / (Total)) * 100
+                    const score = Math.round((s.done / s.total) * 100);
+                    let scoreColor = score >= 80 ? 'text-green-600' : (score >= 50 ? 'text-yellow-600' : 'text-red-600');
+                    
+                    html += `
+                        <tr class="hover:bg-gray-50">
+                            <td class="border border-gray-300 px-4 py-3 font-black text-gray-800">${name}</td>
+                            <td class="border border-gray-300 px-4 py-3 text-center font-bold text-gray-600">${s.total}</td>
+                            <td class="border border-gray-300 px-4 py-3 text-center font-bold text-green-600">${s.done}</td>
+                            <td class="border border-gray-300 px-4 py-3 text-center font-bold text-yellow-600">${s.pending}</td>
+                            <td class="border border-gray-300 px-4 py-3 text-center font-bold text-red-600">${s.delayed}</td>
+                            <td class="border border-gray-300 px-4 py-3 text-center font-black ${scoreColor} text-lg">${score}%</td>
+                        </tr>
+                    `;
+                }
+            });
+
+            if(!hasData) {
+                html += `<tr><td colspan="6" class="text-center py-6 text-gray-500 font-bold">لا توجد مهام مسجلة للأسماء المحددة في هذه الفترة.</td></tr>`;
+            }
+
+            html += `</tbody></table>`;
+            
+            // Add summary widget at the end
+            if(hasData) {
+                const totalTasks = data.length;
+                const totalDone = data.filter(t=>t.status==='منجزة').length;
+                const overallScore = Math.round((totalDone/totalTasks)*100);
+                html += `
+                    <div class="bg-indigo-50 border-l-4 border-indigo-600 p-4 rounded mt-4">
+                        <p class="font-bold text-indigo-900">الخلاصة العامة لهذه الفترة:</p>
+                        <p class="text-sm mt-1">إجمالي المهام المشمولة: <strong>${totalTasks}</strong> مهمة. الإنجاز الكلي: <strong>${overallScore}%</strong>.</p>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        window.printReport = () => { window.print(); };
+
+        // ================= TAB NAVIGATION =================
+        window.switchTab = (tabId) => {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white', 'shadow-md');
+                btn.classList.add('text-gray-300', 'hover:bg-gray-700');
+            });
+
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+            activeBtn.classList.remove('text-gray-300', 'hover:bg-gray-700');
+            activeBtn.classList.add('bg-blue-600', 'text-white', 'shadow-md');
+        };
+
+        window.addEventListener('DOMContentLoaded', init);
+
+    </script>
+</body>
+</html>
